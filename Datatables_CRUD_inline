@@ -1,0 +1,138 @@
+var TableManaged = function () {
+            var handleTable = function () {
+                function restoreRow(oTable, nRow) {
+                    var aData = oTable.fnGetData(nRow);
+                    var jqTds = $('>td', nRow);
+                    for (var i = 0, iLen = jqTds.length; i < iLen; i++) {
+                        oTable.fnUpdate(aData[i], nRow, i, false);
+                    }
+                    oTable.fnDraw();
+                }
+                function editRow(oTable, nRow) {
+                    var aData = oTable.fnGetData(nRow);
+                    var jqTds = $('>td', nRow);
+                    jqTds[0].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[0] + '">';
+                    jqTds[1].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[1] + '">';
+                    jqTds[2].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[2]+ '">';
+                    jqTds[3].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[3]+ '">';
+                    jqTds[4].innerHTML = '<input type="text" class="form-control input-small input-sm" value="' + aData[4]+ '">';
+                    jqTds[5].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[5]+ '">';
+                    jqTds[6].innerHTML = '<input readonly type="text" class="form-control input-small input-sm" value="' + aData[6]+ '">';
+                    jqTds[7].innerHTML = '<a class="edit" href="">Save</a> <a class="cancel" href="">Cancel</a>';
+                }
+                function saveRow(oTable, nRow) {
+                    var aData = oTable.fnGetData(nRow);
+                    var jqInputs = $('input', nRow);
+                    oTable.fnUpdate(jqInputs[0].value, nRow, 0, false);
+                    var kode_perk = jqInputs[0].value.trim();
+                    oTable.fnUpdate(jqInputs[1].value, nRow, 1, false);
+                    var nama_perk = jqInputs[1].value.trim();
+                    oTable.fnUpdate(jqInputs[2].value, nRow, 2, false);
+                    var saldo_awal = jqInputs[2].value;
+                    oTable.fnUpdate(jqInputs[3].value, nRow, 3, false);
+                    var debet = jqInputs[3].value;
+                    oTable.fnUpdate(jqInputs[4].value, nRow, 4, false);
+                    var saldorka = jqInputs[4].value;
+                    oTable.fnUpdate(jqInputs[5].value, nRow, 5, false);
+                    var tahun = jqInputs[5].value;
+                    oTable.fnUpdate(jqInputs[6].value, nRow, 6, false);
+                    var cabang = jqInputs[6].value;
+                    oTable.fnUpdate('<a class="edit" href="">Edit</a>', nRow, 7, false);
+                    oTable.fnDraw();
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        url: "../rka_aruskas/insertUbah",
+                        data: {kode_perk: kode_perk, saldorka: saldorka, tahun: tahun, cabang: cabang},
+                        success: function (data) {
+                            UIToastr.init(data.tipePesan, data.pesan);
+                        }
+                    });
+                    event.preventDefault();
+                    location.reload();
+                }
+                function cancelEditRow(oTable, nRow) {
+                    var jqInputs = $('input', nRow);
+                    oTable.fnUpdate(jqInputs[0].value, nRow, 0, false);
+                    oTable.fnUpdate(jqInputs[1].value, nRow, 1, false);
+                    oTable.fnUpdate(number_format(jqInputs[2].value, 2), nRow, 2, false);
+                    oTable.fnUpdate(number_format(jqInputs[3].value, 2), nRow, 3, false);
+                    oTable.fnUpdate(number_format(jqInputs[4].value, 2), nRow, 4, false);
+                    oTable.fnUpdate(number_format(jqInputs[5].value, 2), nRow, 5, false);
+                    oTable.fnUpdate(number_format(jqInputs[6].value, 2), nRow, 6, false);
+                    oTable.fnUpdate('<a class="edit" href="">Edit</a>', nRow, 7, false);
+                    oTable.fnDraw();
+                }
+                var table = $('#tblSaldoAwal');
+                var oTable = table.dataTable({
+                    "lengthMenu": [
+                    [5, 10, 15, 20, -1],
+                    [5, 10, 15, 20, "All"]],
+                    "pageLength": -1,
+                    "language": {
+                        "lengthMenu": " _MENU_ records"
+                    },
+
+                    "ordering" : false
+                });
+                var nEditing = null;
+                var nNew = false;
+                table.on('click', '.cancel', function (e) {
+                    e.preventDefault();
+                    if (nNew) {
+                        oTable.fnDeleteRow(nEditing);
+                        nEditing = null;
+                        nNew = false;
+                    } else {
+                        restoreRow(oTable, nEditing);
+                        nEditing = null;
+                    }
+                });
+
+                table.on('click', '.edit', function (e) {
+                    e.preventDefault();
+                    var nRow = $(this).parents('tr')[0];
+                    if (nEditing !== null && nEditing != nRow) {
+                        restoreRow(oTable, nEditing);
+                        editRow(oTable, nRow);
+                        nEditing = nRow;
+                    } else if (nEditing == nRow && this.innerHTML == "Save") {
+                        saveRow(oTable, nEditing);
+                        nEditing = null;
+                    } else {
+                        editRow(oTable, nRow);
+                        nEditing = nRow;
+                    }
+                });
+                table.on('focus', '.nomor', function (e) {
+                    if ($(this).val() == '0.00') {
+                        $(this).val('');
+                    } else {
+                        var angka = $(this).val();
+                        $(this).val(number_format(angka, 2));
+                    }
+                });
+                table.on('focusout', '.nomor', function (e) {
+                    if ($(this).val() == '') {
+                        $(this).val('0.00');
+                    } else {
+                        var angka = $(this).val();
+                        $(this).val(number_format(angka, 2));
+                    }
+                });
+                table.on('keyup', '.nomor', function (e) {
+                    var val = $(this).val();
+                    if (isNaN(val)) {
+                        val = val.replace(/[^0-9\.]/g, '');
+                        if (val.split('.').length > 2)
+                            val = val.replace(/\.+$/, "");
+                    }
+                    $(this).val(val);
+                });
+            }
+            return {
+                init: function () {
+                    handleTable();
+                }
+            };
+        }();
